@@ -56,18 +56,22 @@ public class BoilerPlate {
             //Mint a NFT token
             BigInteger tokenId = BigInteger.ONE;
             String uri = "http://test.url";
-            TransactionReceipt.TransactionReceiptData mintReceiptData = kip17.mintWithTokenURI(deployerKeyring.getAddress(), tokenId, uri, new SendOptions(deployerKeyring.getAddress()));
+            TransactionReceipt.TransactionReceiptData mintReceiptData = kip17.mintWithTokenURI(deployerKeyring.getAddress(), 
+             tokenId, uri, new SendOptions(deployerKeyring.getAddress()));
             System.out.println("NFT mint transaction hash : " + mintReceiptData.getTransactionHash());
 
             //Transfer a NFT token
-            TransactionReceipt.TransactionReceiptData transferReceiptData = kip17.transferFrom(deployerKeyring.getAddress(), deployerKeyring.getAddress(), tokenId, new SendOptions(deployerKeyring.getAddress()));
+            TransactionReceipt.TransactionReceiptData transferReceiptData = kip17.transferFrom(deployerKeyring.getAddress(), 
+                deployerKeyring.getAddress(), tokenId, new SendOptions(deployerKeyring.getAddress()));
             System.out.println("NFT transfer transaction hash : " + transferReceiptData.getTransactionHash());
 
             //Burn a NFT token
-            TransactionReceipt.TransactionReceiptData burnReceiptData = kip17.burn(tokenId, new SendOptions(deployerKeyring.getAddress()));
+            TransactionReceipt.TransactionReceiptData burnReceiptData = kip17.burn(tokenId, 
+                new SendOptions(deployerKeyring.getAddress()));
             System.out.println("NFT burn transaction hash : " + burnReceiptData.getTransactionHash());
 
-        } catch (NoSuchMethodException | IOException | InstantiationException | ClassNotFoundException | IllegalAccessException | InvocationTargetException | TransactionException e) {
+        } catch (NoSuchMethodException | IOException | InstantiationException | ClassNotFoundException 
+            | IllegalAccessException | InvocationTargetException | TransactionException e) {
             e.printStackTrace();
         }
     }
