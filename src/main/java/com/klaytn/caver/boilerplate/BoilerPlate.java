@@ -54,7 +54,8 @@ public class BoilerPlate {
 
 
             //Transfer a NFT token
-            Kip17TransactionStatusResponse transferResponse = caver.kas.kip17.transfer(contractAlias, account.getAddress(), account.getAddress(), account.getAddress(), tokenId);
+            Kip17TransactionStatusResponse transferResponse = caver.kas.kip17.transfer(contractAlias, account.getAddress(),
+                account.getAddress(), account.getAddress(), tokenId);
             TransactionReceipt.TransactionReceiptData transferReceiptData = processor.waitForTransactionReceipt(transferResponse.getTransactionHash());
             System.out.println("NFT transfer transaction hash : " + transferReceiptData.getTransactionHash());
 
