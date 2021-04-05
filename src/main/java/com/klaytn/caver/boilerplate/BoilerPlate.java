@@ -1,30 +1,20 @@
 package com.klaytn.caver.boilerplate;
 
-import com.klaytn.caver.Caver;
-import com.klaytn.caver.account.Account;
-import com.klaytn.caver.contract.SendOptions;
-import com.klaytn.caver.kct.kip17.KIP17;
-import com.klaytn.caver.kct.kip7.KIP7;
-import com.klaytn.caver.methods.response.AccountKey;
-import com.klaytn.caver.methods.response.Bytes32;
+
 import com.klaytn.caver.methods.response.TransactionReceipt;
 import com.klaytn.caver.transaction.response.PollingTransactionReceiptProcessor;
 import com.klaytn.caver.transaction.response.TransactionReceiptProcessor;
-import com.klaytn.caver.transaction.type.AccountUpdate;
-import com.klaytn.caver.transaction.type.ValueTransfer;
-import com.klaytn.caver.wallet.keyring.KeyringFactory;
-import com.klaytn.caver.wallet.keyring.SingleKeyring;
-import okhttp3.Credentials;
 import org.web3j.protocol.exceptions.TransactionException;
-import org.web3j.protocol.http.HttpService;
+import xyz.groundx.caver_ext_kas.CaverExtKAS;
+import xyz.groundx.caver_ext_kas.rest_client.io.swagger.client.ApiException;
+import xyz.groundx.caver_ext_kas.rest_client.io.swagger.client.api.kip17.model.Kip17TransactionStatusResponse;
+import xyz.groundx.caver_ext_kas.rest_client.io.swagger.client.api.wallet.model.Account;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
+import java.util.Date;
 
 public class BoilerPlate {
-    private static final String URL_NODE_API = "https://node-api.klaytnapi.com/v1/klaytn";
-
     // Configuration Part
     // Set your KAS access key and secretAccessKey.
     static String accessKey = "{your_accessKeyId}";
@@ -35,52 +25,52 @@ public class BoilerPlate {
     static String chainId = "1001";
 
     public static void main(String[] args) {
-        // Build a Caver instance.
-        Caver caver = setCaver(accessKey, secretAccessKey, chainId);
+        CaverExtKAS caverExtKAS = setCaverExtKAS(accessKey, secretAccessKey, chainId);
 
-        // Run a test.
-        test(caver);
+        test(caverExtKAS);
     }
 
-    public static void test(Caver caver) {
-        String testPrivateKey = "0x{private key}";
+    public static void test(CaverExtKAS caver) {
+        String contractAlias = "kip17-" + new Date().getTime();
+        caver.kas.kip17.getApiClient().setDebugging(true);
+        caver.kas.wallet.getApiClient().setDebugging(true);
 
-        SingleKeyring deployerKeyring = KeyringFactory.createFromPrivateKey(testPrivateKey);
-        caver.wallet.add(deployerKeyring);
+        TransactionReceiptProcessor processor = new PollingTransactionReceiptProcessor(caver, 1000, 15);
 
         try {
+            Account account = caver.kas.wallet.createAccount();
+
             //Deploy KIP-17(NFT) token contract
-            KIP17 kip17 = KIP17.deploy(caver, deployerKeyring.getAddress(), "Klaytn NFT", "KNFT");
-            System.out.println("Deployed contract address : " + kip17.getContractAddress());
+            Kip17TransactionStatusResponse deployedResponse = caver.kas.kip17.deploy("Klaytn NFT", "NFT", contractAlias);
+            TransactionReceipt.TransactionReceiptData deployedReceiptData = processor.waitForTransactionReceipt(deployedResponse.getTransactionHash());
+            System.out.println("Deployed contract address : " + deployedReceiptData.getContractAddress());
 
             //Mint a NFT token
             BigInteger tokenId = BigInteger.ONE;
             String uri = "http://test.url";
-            TransactionReceipt.TransactionReceiptData mintReceiptData = kip17.mintWithTokenURI(deployerKeyring.getAddress(), 
-             tokenId, uri, new SendOptions(deployerKeyring.getAddress()));
-            System.out.println("NFT mint transaction hash : " + mintReceiptData.getTransactionHash());
+            Kip17TransactionStatusResponse mintedResponse = caver.kas.kip17.mint(contractAlias, account.getAddress(), tokenId, uri);
+            TransactionReceipt.TransactionReceiptData mintReceiptData = processor.waitForTransactionReceipt(mintedResponse.getTransactionHash());
+            System.out.println("NFT mint transaction hash : " + mintReceiptData.getContractAddress());
+
 
             //Transfer a NFT token
-            TransactionReceipt.TransactionReceiptData transferReceiptData = kip17.transferFrom(deployerKeyring.getAddress(), 
-                deployerKeyring.getAddress(), tokenId, new SendOptions(deployerKeyring.getAddress()));
+            Kip17TransactionStatusResponse transferResponse = caver.kas.kip17.transfer(contractAlias, account.getAddress(), account.getAddress(), account.getAddress(), tokenId);
+            TransactionReceipt.TransactionReceiptData transferReceiptData = processor.waitForTransactionReceipt(transferResponse.getTransactionHash());
             System.out.println("NFT transfer transaction hash : " + transferReceiptData.getTransactionHash());
 
             //Burn a NFT token
-            TransactionReceipt.TransactionReceiptData burnReceiptData = kip17.burn(tokenId, 
-                new SendOptions(deployerKeyring.getAddress()));
+            Kip17TransactionStatusResponse burnResponse = caver.kas.kip17.burn(contractAlias, account.getAddress(), tokenId);
+            TransactionReceipt.TransactionReceiptData burnReceiptData = processor.waitForTransactionReceipt(burnResponse.getTransactionHash());
             System.out.println("NFT burn transaction hash : " + burnReceiptData.getTransactionHash());
-
-        } catch (NoSuchMethodException | IOException | InstantiationException | ClassNotFoundException 
-            | IllegalAccessException | InvocationTargetException | TransactionException e) {
+        } catch (ApiException | TransactionException | IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static Caver setCaver(String accessKey, String secretAccessKey, String chainID) {
-        HttpService httpService = new HttpService(URL_NODE_API);
-        httpService.addHeader("Authorization", Credentials.basic(accessKey, secretAccessKey));
-        httpService.addHeader("x-chain-id", chainID);
 
-        return new Caver(httpService);
+    private static CaverExtKAS setCaverExtKAS(String accessKey, String secretAccessKey, String chainID) {
+        CaverExtKAS caverExtKAS = new CaverExtKAS(chainID, accessKey, secretAccessKey);
+        caverExtKAS.initKIP17API(chainID, accessKey, secretAccessKey, "https://kip17-api.klaytnapi.com");
+        return caverExtKAS;
     }
 }
